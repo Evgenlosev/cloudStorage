@@ -11,6 +11,7 @@
     <modules>
         <module>server</module>
         <module>client</module>
+        <module>Core</module>
     </modules>
 
     <properties>
@@ -19,6 +20,13 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.68.Final</version>
+        </dependency>
+
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>

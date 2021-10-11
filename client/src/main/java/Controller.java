@@ -1,17 +1,15 @@
+import com.geekbrains.FileMessage;
+import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
+import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
-import javafx.scene.Scene;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
-import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.file.Files;
@@ -26,8 +24,8 @@ public class Controller implements Initializable {
     private static byte[] buffer = new byte[1024];
     public ListView<String> listView;
     public TextField input;
-    private DataInputStream is;
-    private DataOutputStream os;
+    private ObjectDecoderInputStream is;
+    private ObjectEncoderOutputStream os;
     private static Logger LOG = LoggerFactory.getLogger(Controller.class);
 
     public void send(ActionEvent actionEvent) throws Exception {
@@ -38,19 +36,8 @@ public class Controller implements Initializable {
 
     private void sendFile(String fileName) throws IOException {
         Path file = Paths.get(ROOT_DIR, fileName);
-        if (Files.exists(file)) {
-            long size = Files.size(file);
-            os.writeUTF(fileName);
-            os.writeLong(size);
-            InputStream fileStream = Files.newInputStream(file);
-            int read;
-            while ((read = fileStream.read(buffer)) != -1) {
-                os.write(buffer, 0, read);
-            }
-            os.flush();
-        } else {
-            os.writeUTF(fileName);
-        }
+        os.writeObject(new FileMessage(file));
+        os.flush();
     }
 
     @Override
@@ -58,12 +45,12 @@ public class Controller implements Initializable {
         try {
             fileInfo();
             Socket socket = new Socket("localhost", 8189);
-            is = new DataInputStream(socket.getInputStream());
-            os = new DataOutputStream(socket.getOutputStream());
+            os = new ObjectEncoderOutputStream(socket.getOutputStream());
+            is = new ObjectDecoderInputStream(socket.getInputStream());
             Thread daemon = new Thread(() -> {
                 try {
                     while (true) {
-                        String msg = is.readUTF();
+                        String msg = (String) is.readObject();
                         LOG.debug("received: {}", msg);
                         Platform.runLater(() -> input.setText(msg));
                     }
