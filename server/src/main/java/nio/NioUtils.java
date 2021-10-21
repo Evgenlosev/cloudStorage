@@ -17,7 +17,7 @@ public class NioUtils {
         System.out.println(Files.size(path));
 
         System.out.println(path.toAbsolutePath());
-        Path copy = path.resolve("Hello.txt");
+        Path copy = path.resolve("var.txt");
         System.out.println(Files.exists(copy));
         WatchService watchService = FileSystems.getDefault().newWatchService();
 
