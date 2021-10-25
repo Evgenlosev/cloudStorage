@@ -7,6 +7,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -33,54 +34,60 @@ public class Controller implements Initializable {
     private ObjectDecoderInputStream is;
     private ObjectEncoderOutputStream os;
 
+    public void setIs(ObjectDecoderInputStream is) {
+        this.is = is;
+    }
 
+    public void setOs(ObjectEncoderOutputStream os) {
+        this.os = os;
+    }
+
+    @SneakyThrows
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        try {
-            currentDir = Paths.get("client", "root");
-            Socket socket = new Socket("localhost", 8189);
-            os = new ObjectEncoderOutputStream(socket.getOutputStream());
-            is = new ObjectDecoderInputStream(socket.getInputStream());
+        currentDir = Paths.get("client", "root");
+        Socket socket = new Socket("localhost", 8189);
+        os = new ObjectEncoderOutputStream(socket.getOutputStream());
+        is = new ObjectDecoderInputStream(socket.getInputStream());
 
-            refreshClientView();
-            addNavigationListeners();
+        refreshClientView();
+        addNavigationListeners();
 
-            Thread daemon = new Thread(() -> {
-                try {
-                    while (true) {
-                        Command command = (Command) is.readObject();
-                        switch (command.getType()) {
-                            case LIST_RESPONSE:
-                                ListResponse response = (ListResponse) command;
-                                List<String> names = response.getNames();
-                                refreshServerView(names);
-                                log.debug("Updated the list of files on the server");
-                                break;
-                            case PATH_RESPONSE:
-                                PathResponse pathResponse = (PathResponse) command;
-                                String path = pathResponse.getPath();
-                                Platform.runLater(() -> serverPath.setText(path));
-                                log.debug("Updated the server path");
-                                break;
-                            case FILE_MESSAGE:
-                                FileMessage message = (FileMessage) command;
-                                Files.write(currentDir.resolve(message.getName()), message.getBytes());
-                                refreshClientView();
-                                log.debug("File received: {}", message.getName());
-                                break;
-                        }
+        Thread daemon = new Thread(() -> {
+            try {
+                while (true) {
+                    Command command = (Command) is.readObject();
+                    switch (command.getType()) {
+                        case LIST_RESPONSE:
+                            ListResponse response = (ListResponse) command;
+                            List<String> names = response.getNames();
+                            refreshServerView(names);
+                            log.debug("Обновлен список файлов на серверной части");
+                            break;
+                        case PATH_RESPONSE:
+                            PathResponse pathResponse = (PathResponse) command;
+                            String path = pathResponse.getPath();
+                            Platform.runLater(() -> serverPath.setText(path));
+                            log.debug("Обновлен путь на серверной части");
+                            break;
+                        case FILE_MESSAGE:
+                            FileMessage message = (FileMessage) command;
+                            Files.write(currentDir.resolve(message.getName()), message.getBytes());
+                            refreshClientView();
+                            log.debug("Получен файл: {}", message.getName());
+                            break;
                     }
-                }catch (Exception e) {
-                    log.error("Problem with reading of the input command");
                 }
+            }catch (Exception e) {
+                log.error("Проблема с чтением вхоящей команды", e);
+            }
 
-            });
-            daemon.setDaemon(true);
-            daemon.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        });
+        daemon.setDaemon(true);
+        daemon.start();
+
     }
+
 
     private void refreshServerView(List<String> names) {
         Platform.runLater(() -> {

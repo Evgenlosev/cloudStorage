@@ -11,6 +11,8 @@ public class Command implements Serializable {
     }
 
     public enum CommandType {
+        AUTH_REQUEST,
+        AUTH_RESPONSE,
         FILE_MESSAGE,
         FILE_REQUEST,
         LIST_REQUEST,

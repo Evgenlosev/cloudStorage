@@ -1,7 +1,6 @@
 package netty;
 
 import com.geekbrains.*;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +13,7 @@ import java.nio.file.Paths;
 public class FileMessageHandler extends SimpleChannelInboundHandler<Command> {
 
     private static Path currentPath;
+    AuthService baseAuthService = new AuthService();
 
     public FileMessageHandler() {
         currentPath = Paths.get("server", "root");
@@ -58,6 +58,24 @@ public class FileMessageHandler extends SimpleChannelInboundHandler<Command> {
                     currentPath = currentPath.getParent();
                 }
                 ctx.writeAndFlush(new PathResponse(currentPath.toString()));
+                ctx.writeAndFlush(new ListResponse(currentPath));
+                break;
+            case AUTH_REQUEST:
+                AuthRequest authRequest = (AuthRequest) com;
+                String login = authRequest.getLogin();
+                String pass = authRequest.getPass();
+                AuthResponse authResponse = new AuthResponse();
+                try {
+                    if (baseAuthService.authentication(login, pass)) {
+                        authResponse.setAuthOk(true);
+                        currentPath = Paths.get("server","root");
+                    } else {
+                        authResponse.setAuthOk(false);
+                    }
+                } catch (Exception e){
+                    log.error("Ошибка при обработке запроса на аутентификацию", e);
+                }
+                ctx.writeAndFlush(authResponse);
                 ctx.writeAndFlush(new ListResponse(currentPath));
                 break;
         }
