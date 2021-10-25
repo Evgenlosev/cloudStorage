@@ -20,4 +20,5 @@ public class App extends Application {
         primaryStage.setMinHeight(primaryStage.getHeight());
         primaryStage.setMinWidth(primaryStage.getWidth());
     }
+    
 }
